@@ -1,0 +1,324 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var training = ee.FeatureCollection("projects/saptarshi8485/assets/Training_data_Sikkim"),
+    trUK = ee.FeatureCollection("projects/saptarshi8485/assets/Training_data_Uttarakhand"),
+    tdtskm = ee.FeatureCollection("projects/saptarshi8485/assets/Test_data_SKM");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+///////////Sikkim region trainings////////
+print('Training on Sikkim data')
+//----------------------------------------------------//
+var classProperty = 'snow';
+var bands = ['B1','B2','B3','B4','B5','B6','B7','B8','B11','B12']
+//Creating train and test subsets
+var withRandom = training.randomColumn('random');
+
+// We want to reserve some of the data for testing, to avoid overfitting the model.
+var split = 0.7;  // Roughly 70% training, 30% testing.
+var trainingPartition = withRandom.filter(ee.Filter.lt('random', split));
+var testingPartition = withRandom.filter(ee.Filter.gte('random', split));
+
+//----------------------------------------------------------------------//
+
+// Trained with Smile CART
+var cartclassifier = ee.Classifier.smileCart(25,2).train({
+  features: trainingPartition,
+  classProperty: classProperty,
+  inputProperties: bands
+});
+
+// Classify the test FeatureCollection.
+var train = trainingPartition.classify(cartclassifier);
+var test = testingPartition.classify(cartclassifier);
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var kpt = ee.ConfusionMatrix(trconfusionMatrix).kappa();
+var pat = ee.ConfusionMatrix(trconfusionMatrix).producersAccuracy();
+var cat = ee.ConfusionMatrix(trconfusionMatrix).consumersAccuracy();
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Smile CART classifier:-\nTraining Confusion Matrix', trconfusionMatrix,
+      '\nTesting Confusion Matrix', confusionMatrix,
+      '\nTraining accuracy is:',trconfusionMatrix.accuracy(),
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTraining kappa:',kpt,
+      '\nTraining PA:',pat,
+      '\nTraining CA:',cat,
+      '\nValidation kappa:',kpv,
+      '\nValidation PA:',pav,
+      '\nValidation CA:',cav);
+
+//-------------------------------------------------------------------//
+
+// Trained with libsvm
+var svmclassifier = ee.Classifier.libsvm({
+  decisionProcedure : 'voting',
+  svmType : 'NU_SVC',
+  kernelType : 'POLY',
+  gamma : 0.5,
+  degree : 2,
+  coef0 : 0.3,
+  nu : 0.3
+}).train({
+  features: trainingPartition,
+  classProperty: classProperty,
+  inputProperties: bands
+});
+
+// Classify the test FeatureCollection.
+var train = trainingPartition.classify(svmclassifier);
+var test = testingPartition.classify(svmclassifier);
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var kpt = ee.ConfusionMatrix(trconfusionMatrix).kappa();
+var pat = ee.ConfusionMatrix(trconfusionMatrix).producersAccuracy();
+var cat = ee.ConfusionMatrix(trconfusionMatrix).consumersAccuracy();
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('SVM classifier:-\nTraining Confusion Matrix', trconfusionMatrix,
+      '\nTesting Confusion Matrix', confusionMatrix,
+      '\nTraining accuracy is:',trconfusionMatrix.accuracy(),
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTraining kappa:',kpt,
+      '\nTraining PA:',pat,
+      '\nTraining CA:',cat,
+      '\nValidation kappa:',kpv,
+      '\nValidation PA:',pav,
+      '\nValidation CA:',cav);
+
+//-------------------------------------------------------------------//
+
+// Trained with Gradient Tree Boost
+var gtbclassifier = ee.Classifier.smileGradientTreeBoost(35,0.6,0.7,2,'LeastSquares',1).train({
+  features: trainingPartition,
+  classProperty: classProperty,
+  inputProperties: bands
+});
+
+// Classify the test FeatureCollection.
+var train = trainingPartition.classify(gtbclassifier);
+var test = testingPartition.classify(gtbclassifier);
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var kpt = ee.ConfusionMatrix(trconfusionMatrix).kappa();
+var pat = ee.ConfusionMatrix(trconfusionMatrix).producersAccuracy();
+var cat = ee.ConfusionMatrix(trconfusionMatrix).consumersAccuracy();
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Gradient Tree Bosst classifier:-\nTraining Confusion Matrix', trconfusionMatrix,
+      '\nTesting Confusion Matrix', confusionMatrix,
+      '\nTraining accuracy is:',trconfusionMatrix.accuracy(),
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTraining kappa:',kpt,
+      '\nTraining PA:',pat,
+      '\nTraining CA:',cat,
+      '\nValidation kappa:',kpv,
+      '\nValidation PA:',pav,
+      '\nValidation CA:',cav);
+
+//-------------------------------------------------------------------//
+
+// Trained with Random Forest Boost
+var rfclassifier = ee.Classifier.smileRandomForest(5,10,2).train({
+  features: trainingPartition,
+  classProperty: classProperty,
+  inputProperties: bands
+});
+
+// Classify the test FeatureCollection.
+var train = trainingPartition.classify(rfclassifier);
+var test = testingPartition.classify(rfclassifier);
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+
+// Print the confusion matrix.
+var trconfusionMatrix = train.errorMatrix(classProperty, 'classification');
+var kpt = ee.ConfusionMatrix(trconfusionMatrix).kappa();
+var pat = ee.ConfusionMatrix(trconfusionMatrix).producersAccuracy();
+var cat = ee.ConfusionMatrix(trconfusionMatrix).consumersAccuracy();
+var confusionMatrix = test.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Random Forest classifier:-\nTraining Confusion Matrix', trconfusionMatrix,
+      '\nTesting Confusion Matrix', confusionMatrix,
+      '\nTraining accuracy is:',trconfusionMatrix.accuracy(),
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTraining kappa:',kpt,
+      '\nTraining PA:',pat,
+      '\nTraining CA:',cat,
+      '\nValidation kappa:',kpv,
+      '\nValidation PA:',pav,
+      '\nValidation CA:',cav);
+
+//-------------------------------------------------------------------//
+
+//-------------------------------------------------------------------//
+//------------Testing on Uttarakhand Dataset-------------------------//
+//-------------------------------------------------------------------//
+print('Testing results on Uttarakhand data')
+var total = trUK.classify(cartclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('CART classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+var total = trUK.classify(svmclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('SVM classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+var total = trUK.classify(gtbclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Gradient Tree Boost classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+var total = trUK.classify(rfclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Random Forest classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+      //-------------------------------------------------------------------//
+//------------Testing on Sikkim 20/21 Dataset-------------------------//
+//-------------------------------------------------------------------//
+print('Testing results on Sikkim 20/21 data')
+
+var total = tdtskm.classify(cartclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('CART classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+var total = tdtskm.classify(svmclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('SVM classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+var total = tdtskm.classify(gtbclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Gradient Tree Boost classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+var total = tdtskm.classify(rfclassifier);
+
+var confusionMatrix = total.errorMatrix(classProperty, 'classification');
+var kpv = ee.ConfusionMatrix(confusionMatrix).kappa();
+var pav = ee.ConfusionMatrix(confusionMatrix).producersAccuracy();
+var cav = ee.ConfusionMatrix(confusionMatrix).consumersAccuracy();
+
+print('Random Forest classifier:- \nTesting Confusion Matrix', confusionMatrix,
+      '\nTesting accuracy is:',confusionMatrix.accuracy(),
+      '\nTesting kappa:',kpv,
+      '\nTesting PA:',pav,
+      '\nTesting CA:',cav);
+      
+// --------------------------------------------------------------------
+
+// Map the function over one month of data and take the median.
+// Load Sentinel-2 TOA reflectance data.
+var dataset = ee.ImageCollection('COPERNICUS/S2')
+                  .filterDate('2019-11-01', '2019-11-30');
+
+var loc = ee.FeatureCollection("users/rituanilkumar/north_sikkim_bound");
+
+var im = dataset.median().clip(loc);
+var stfcc = {
+  min: 0.0,
+  max: 10000,
+  bands: ['B8', 'B4', 'B3'],
+};
+var fcc = {
+  min: 0.0,
+  max: 10000,
+  bands: ['B12', 'B11', 'B2'],
+};
+
+Map.setCenter(88, 27.5, 10);
+Map.addLayer(im, stfcc, 'stfcc');
+Map.addLayer(im, fcc, 'fcc');
+
+var clsfd = im.classify(gtbclassifier);
+Map.addLayer(clsfd, {min:0,max:1,palette : ['black','white']}, 'Classified');
+
+// ---------------------------------------------
+
+Export.image.toDrive({
+  image : clsfd,
+  maxPixels : 1e13
+});
+
